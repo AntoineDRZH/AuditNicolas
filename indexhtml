@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Instagram — Nicolas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --or: #C9A84C; --or2: #E8C97A;
+      --noir: #080808; --noir2: #0E0E0E; --noir3: #141414; --noir4: #1A1A1A;
+      --blanc: #F2EDE6; --gris: rgba(242,237,230,0.5);
+      --gris2: rgba(242,237,230,0.12); --gris3: rgba(242,237,230,0.06);
+      --rouge: rgba(220,60,60,0.15); --rouge-border: rgba(220,60,60,0.3); --rouge-text: #F87171;
+      --jaune: rgba(217,119,6,0.15); --jaune-border: rgba(217,119,6,0.3); --jaune-text: #FCD34D;
+      --vert: rgba(16,185,129,0.15); --vert-border: rgba(16,185,129,0.3); --vert-text: #6EE7B7;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--noir); color: var(--blanc); font-family: 'DM Sans', sans-serif; font-weight: 300; }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px;
+    }
+
+    .wrap { max-width: 800px; margin: 0 auto; padding: 60px 32px 100px; position: relative; z-index: 1; }
+    @media(max-width:600px) { .wrap { padding: 40px 20px 80px; } }
+
+    .doc-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding-bottom: 40px; border-bottom: 1px solid var(--gris3);
+      margin-bottom: 48px; flex-wrap: wrap; gap: 20px;
+    }
+    .doc-logo { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; letter-spacing: 4px; text-transform: uppercase; }
+    .doc-logo em { color: var(--or); font-style: normal; }
+    .doc-logo-sub { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gris); margin-top: 4px; }
+    .doc-meta { text-align: right; }
+    .doc-type { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--or); margin-bottom: 6px; }
+    .doc-client { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400; color: var(--blanc); }
+    .doc-handle { font-size: 12px; color: var(--gris); margin-top: 4px; }
+    .doc-date { font-size: 11px; color: var(--gris); margin-top: 4px; }
+
+    .score-global {
+      background: var(--noir3); border: 1px solid rgba(201,168,76,0.2);
+      padding: 32px; margin-bottom: 40px; text-align: center; position: relative; overflow: hidden;
+    }
+    .score-global::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--or), transparent);
+    }
+    .score-label { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--or); margin-bottom: 16px; }
+    .score-num { font-family: 'Cormorant Garamond', serif; font-size: 80px; font-weight: 300; line-height: 1; color: var(--or); letter-spacing: -2px; }
+    .score-max { font-size: 24px; color: var(--gris); }
+    .score-mention { font-size: 14px; color: var(--gris); margin-top: 12px; letter-spacing: 1px; }
+    .score-bar-wrap { margin-top: 20px; background: var(--gris3); height: 4px; border-radius: 4px; overflow: hidden; }
+    .score-bar { height: 100%; background: linear-gradient(90deg, var(--or), var(--or2)); border-radius: 4px; transition: width 1s ease; }
+
+    .audit-section { margin-bottom: 32px; }
+    .section-head {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 20px; background: var(--noir3);
+      border: 1px solid var(--gris3); margin-bottom: 2px;
+      cursor: pointer; user-select: none;
+    }
+    .section-head:hover { border-color: rgba(201,168,76,0.15); }
+    .section-icon { font-size: 18px; flex-shrink: 0; }
+    .section-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; flex: 1; }
+    .section-score-badge { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; letter-spacing: 1px; }
+    .section-arrow { color: var(--or); font-size: 18px; transition: transform 0.2s; }
+    .section-head.open .section-arrow { transform: rotate(90deg); }
+
+    .section-body { display: none; border: 1px solid var(--gris3); border-top: none; }
+    .section-body.open { display: block; }
+
+    .critere {
+      display: grid; grid-template-columns: 28px 1fr auto;
+      gap: 16px; align-items: start;
+      padding: 18px 20px; border-bottom: 1px solid var(--gris3);
+    }
+    .critere:last-child { border-bottom: none; }
+    .critere-status { font-size: 16px; margin-top: 2px; }
+    .critere-title { font-size: 13px; font-weight: 400; color: var(--blanc); margin-bottom: 4px; }
+    .critere-obs { font-size: 12px; color: var(--gris); line-height: 1.7; }
+    .critere-reco {
+      font-size: 11px; color: var(--or); margin-top: 6px; line-height: 1.6;
+      padding: 6px 10px; background: rgba(201,168,76,0.05);
+      border-left: 2px solid rgba(201,168,76,0.3);
+    }
+    .tag {
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+      align-self: flex-start; margin-top: 3px;
+    }
+    .tag-ok { background: var(--vert); border: 1px solid var(--vert-border); color: var(--vert-text); }
+    .tag-warn { background: var(--jaune); border: 1px solid var(--jaune-border); color: var(--jaune-text); }
+    .tag-ko { background: var(--rouge); border: 1px solid var(--rouge-border); color: var(--rouge-text); }
+
+    .synthese {
+      background: var(--noir3); border: 1px solid rgba(201,168,76,0.15);
+      padding: 32px; margin-top: 40px; position: relative; overflow: hidden;
+    }
+    .synthese::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--or), transparent);
+    }
+    .synthese-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400; color: var(--blanc); margin-bottom: 24px; letter-spacing: 1px; }
+    .synthese-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width:500px) { .synthese-grid { grid-template-columns: 1fr; } }
+    .synthese-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--or); margin-bottom: 10px; }
+    .synthese-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0; border-bottom: 1px solid var(--gris3); font-size: 13px; color: var(--gris); line-height: 1.6;
+    }
+    .synthese-item:last-child { border-bottom: none; }
+    .synthese-dash { color: var(--or); flex-shrink: 0; }
+
+    .priorites { margin-top: 32px; }
+    .priorite-item {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 16px 20px; background: var(--noir4);
+      border: 1px solid var(--gris3); margin-bottom: 8px;
+    }
+    .priorite-num { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--or); line-height: 1; min-width: 32px; }
+    .priorite-title { font-size: 14px; font-weight: 400; color: var(--blanc); margin-bottom: 4px; }
+    .priorite-desc { font-size: 12px; color: var(--gris); line-height: 1.7; }
+
+    .doc-footer {
+      margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--gris3);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 16px; letter-spacing: 3px; text-transform: uppercase; color: rgba(242,237,230,0.2); }
+    .footer-logo em { color: rgba(201,168,76,0.3); font-style: normal; }
+    .footer-info { font-size: 11px; color: rgba(242,237,230,0.2); text-align: right; line-height: 1.8; }
+
+    .print-btn {
+      position: fixed; bottom: 32px; right: 32px;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--or), var(--or2));
+      color: var(--noir); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; box-shadow: 0 4px 24px rgba(201,168,76,0.3);
+      transition: all 0.2s; z-index: 10;
+    }
+    .print-btn:hover { transform: scale(1.1); }
+    @media print { .print-btn { display: none; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-header">
+    <div>
+      <div class="doc-logo">Antoine<em>.</em></div>
+      <div class="doc-logo-sub">Audit Instagram</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-type">Rapport d'audit</div>
+      <div class="doc-client">Nicolas </div>
+      <div class="doc-handle">@nicolas.coachsportifcaen</div>
+      <div class="doc-date" id="audit-date"></div>
+    </div>
+  </div>
+
+  <div class="score-global">
+    <div class="score-label">Score global</div>
+    <div class="score-num">8<span class="score-max">/20</span></div>
+    <div class="score-mention">Les bases sont là — mais il y a du travail.</div>
+    <div class="score-bar-wrap">
+      <div class="score-bar" id="score-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 1 — PROFIL -->
+  <div class="audit-section">
+    <div class="section-head open" onclick="toggleSection(this)">
+      <div class="section-icon">👤</div>
+      <div class="section-name">Le profil</div>
+      <span class="section-score-badge tag-warn">3/5</span>
+      <div class="section-arrow">›</div>
+    </div>
+    <div class="section-body open">
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Nom d'utilisateur</div>
+          <div class="critere-obs">@nicolas.coachsportifcaen est bien construit. Lisible, direct, et utile pour quiconque cherche un coach à Caen. Rien à redire là-dessus.</div>
+        </div>
+        <span class="tag tag-ok">OK</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Bio</div>
+          <div class="critere-obs">Les spécialités sont bien mentionnées — surpoids, TMS, self-défense — et la zone géographique est claire. Le lien Linktree est en place. C'est une bio qui fait le travail.</div>
+        </div>
+        <span class="tag tag-ok">OK</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Photo de profil</div>
+          <div class="critere-obs">La photo est correcte, mais elle ne marque pas. La pose manque de chaleur, le fond ne travaille pas pour vous. Ce n'est pas urgent, mais ça compte — c'est la première chose que les gens voient.</div>
+          <div class="critere-reco">→ Une photo en mouvement ou simplement en train de sourire, avec un fond légèrement flouté, changerait vraiment l'impression à la première visite.</div>
+        </div>
+        <span class="tag tag-warn">À améliorer</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Croissance</div>
+          <div class="critere-obs">79 abonnés pour 38 publications. Ce ratio est trop faible — et ce n'est pas une question de chance. C'est le signe que le contenu actuel ne donne pas encore envie de s'abonner. Les gens passent, regardent, et repartent.</div>
+          <div class="critere-reco">→ C'est le symptôme, pas la cause. On règle ça en travaillant la cohérence visuelle et la stratégie de contenu.</div>
+        </div>
+        <span class="tag tag-ko">Problème</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Lien en bio</div>
+          <div class="critere-obs">Linktree présent et fonctionnel. C'est bien.</div>
+        </div>
+        <span class="tag tag-ok">OK</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 — COHÉRENCE VISUELLE -->
+  <div class="audit-section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <div class="section-icon">🎨</div>
+      <div class="section-name">Cohérence visuelle</div>
+      <span class="section-score-badge tag-ko">1/5</span>
+      <div class="section-arrow">›</div>
+    </div>
+    <div class="section-body">
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Identité visuelle</div>
+          <div class="critere-obs">C'est le problème principal, et il vaut mieux être direct là-dessus. Quand on regarde votre feed, on a l'impression de voir plusieurs comptes différents. Photos brutes, visuels orange et bleu qui s'affrontent, infographies chargées — rien ne se tient ensemble. Un visiteur ne peut pas construire une image mentale claire de qui vous êtes.</div>
+          <div class="critere-reco">→ Trois couleurs maximum, deux polices, un style photo uniforme. C'est tout ce qu'il faut pour que ça change du tout au tout.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Charte graphique</div>
+          <div class="critere-obs">Les visuels "AN>FORME" concentrent trop de choses au même endroit : couleurs qui s'opposent, plusieurs typographies, du texte partout. Le résultat est dense et difficile à lire en une seconde — or c'est le temps qu'on a sur Instagram.</div>
+          <div class="critere-reco">→ Des templates Canva épurés, réutilisables, dans une charte cohérente. On crée ça une fois et on s'y tient.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Style photographique</div>
+          <div class="critere-obs">Vos photos de séances sont bonnes — vraiment. Le problème, c'est qu'elles sont noyées dans un feed qui ne leur rend pas justice. Sans traitement uniforme, elles perdent leur impact.</div>
+          <div class="critere-reco">→ Un preset Lightroom léger appliqué à toutes vos photos suffit à donner une cohérence immédiate à l'ensemble du compte.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Reconnaissance immédiate</div>
+          <div class="critere-obs">Si quelqu'un tombe sur un de vos posts en dehors de votre profil, il ne sait pas que c'est vous. C'est probablement le point le plus important à régler sur le fond.</div>
+          <div class="critere-reco">→ L'objectif est simple : n'importe quel post doit être reconnaissable comme étant le vôtre en moins d'une seconde.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3 — CONTENU -->
+  <div class="audit-section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <div class="section-icon">📝</div>
+      <div class="section-name">Contenu</div>
+      <span class="section-score-badge tag-warn">3/5</span>
+      <div class="section-arrow">›</div>
+    </div>
+    <div class="section-body">
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Variété des sujets</div>
+          <div class="critere-obs">Seniors, self-défense féminine, surpoids, TMS, coaching à domicile — vous couvrez bien vos spécialités. Les sujets sont pertinents et différenciants par rapport à la concurrence locale.</div>
+        </div>
+        <span class="tag tag-ok">OK</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Lisibilité des visuels promo</div>
+          <div class="critere-obs">Les posts promotionnels veulent tout dire en une seule image. C'est compréhensible, mais ça ne fonctionne pas. Sur Instagram, personne ne lit un visuel avec 15 lignes de texte — on scrolle et on passe à autre chose.</div>
+          <div class="critere-reco">→ Une image, un message. Cinq ou six mots sur le visuel, le reste dans la légende. C'est une règle simple mais elle change tout.</div>
+        </div>
+        <span class="tag tag-ko">Problème</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Fil conducteur</div>
+          <div class="critere-obs">En parcourant votre compte, on a du mal à saisir une personnalité claire. Il y a de tout — des conseils, de la promo, des photos — mais sans logique qui relie l'ensemble. Ce n'est pas une question de qualité, c'est une question de structure.</div>
+          <div class="critere-reco">→ Trois ou quatre piliers de contenu récurrents changent ça immédiatement : le visiteur sait à quoi s'attendre, et vous savez quoi publier.</div>
+        </div>
+        <span class="tag tag-ko">Problème</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Photos de séances</div>
+          <div class="critere-obs">Ce sont vos meilleures armes. Les photos en situation réelle montrent concrètement ce que vous faites — et ça rassure les gens qui hésitent encore à passer le cap. Il faut les mettre beaucoup plus en avant.</div>
+          <div class="critere-reco">→ Ces photos doivent être au cœur du compte, pas noyées entre deux infographies.</div>
+        </div>
+        <span class="tag tag-ok">Atout</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Fréquence de publication</div>
+          <div class="critere-obs">38 posts au total, sans rythme régulier visible. Pour construire une audience sur Instagram, il faut nourrir l'algorithme — et surtout montrer aux abonnés que vous êtes là. Une publication de temps en temps ne suffit pas à créer ce sentiment de présence.</div>
+          <div class="critere-reco">→ Trois posts par semaine minimum, avec des stories au quotidien. Ça paraît beaucoup, mais avec les bons templates, ça prend bien moins de temps qu'on ne le croit.</div>
+        </div>
+        <span class="tag tag-warn">À améliorer</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 — ENGAGEMENT -->
+  <div class="audit-section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <div class="section-icon">💬</div>
+      <div class="section-name">Engagement & Communauté</div>
+      <span class="section-score-badge tag-ko">1/5</span>
+      <div class="section-arrow">›</div>
+    </div>
+    <div class="section-body">
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Taux d'engagement</div>
+          <div class="critere-obs">Avec 79 abonnés, la base est encore trop petite pour générer des interactions qui alimentent l'algorithme. Ce n'est pas un jugement — c'est là où en est le compte aujourd'hui, et c'est précisément pour ça qu'on travaille dessus.</div>
+          <div class="critere-reco">→ Des posts qui posent une vraie question, qui donnent un conseil concret ou qui interpellent directement votre cible génèrent naturellement plus de réactions. C'est une question de format autant que de fond.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Contenu partageable</div>
+          <div class="critere-obs">La majorité des posts actuels sont à usage unique — on les voit, on passe. Il n'y a pas grand-chose qui donne envie de les sauvegarder ou de les envoyer à quelqu'un. C'est pourtant l'un des leviers de croissance les plus puissants sur Instagram.</div>
+          <div class="critere-reco">→ Intégrer régulièrement des posts "à garder" : un conseil pratique, une astuce en trois étapes, une information utile pour votre cible. Simple à produire, très efficace.</div>
+        </div>
+        <span class="tag tag-ko">Problème</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Stories</div>
+          <div class="critere-obs">Pas de stories actives visibles. C'est dommage, parce que les stories sont l'endroit où on crée le vrai lien avec sa communauté — bien plus que les posts. C'est là qu'on montre qui on est, au quotidien, sans avoir besoin de faire quelque chose de parfait.</div>
+          <div class="critere-reco">→ Une story par jour. Un conseil rapide, une coulisse de séance, un sondage. Rien de compliqué — mais sur la durée, ça change tout.</div>
+        </div>
+        <span class="tag tag-warn">À améliorer</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5 — STRATÉGIE -->
+  <div class="audit-section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <div class="section-icon">🎯</div>
+      <div class="section-name">Stratégie & Positionnement</div>
+      <span class="section-score-badge tag-warn">2/5</span>
+      <div class="section-arrow">›</div>
+    </div>
+    <div class="section-body">
+      <div class="critere">
+        <div class="critere-status">✅</div>
+        <div class="critere-content">
+          <div class="critere-title">Cible claire</div>
+          <div class="critere-obs">Vous savez à qui vous parlez : seniors, femmes, personnes en surpoids, TMS. C'est une vraie force, et c'est plus rare qu'on ne le pense. Beaucoup de coachs essaient de parler à tout le monde — vous, non.</div>
+        </div>
+        <span class="tag tag-ok">OK</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">❌</div>
+        <div class="critere-content">
+          <div class="critere-title">Ligne éditoriale</div>
+          <div class="critere-obs">Il n'y a pas de ligne éditoriale définie pour le moment. D'un post à l'autre, on ne sait pas ce qu'on va trouver — un conseil, une promo, une photo de séance. Ce manque de cohérence rend difficile pour un abonné de comprendre pourquoi il vous suit, et ce qu'il a à y gagner.</div>
+          <div class="critere-reco">→ Quatre piliers suffisent : Conseil / Coulisses / Témoignage / Offre. Chaque post s'inscrit dans l'un d'eux. C'est structurant pour vous, et rassurant pour votre audience.</div>
+        </div>
+        <span class="tag tag-ko">Critique</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Appels à l'action</div>
+          <div class="critere-obs">Les CTA existent, mais ils se perdent dans la masse d'informations. À la fin d'un post, le visiteur ne sait pas toujours clairement ce qu'il est censé faire — et si ce n'est pas clair, il ne fait rien.</div>
+          <div class="critere-reco">→ Un post, un seul appel à l'action, placé clairement en fin de légende. Pas plus.</div>
+        </div>
+        <span class="tag tag-warn">À améliorer</span>
+      </div>
+      <div class="critere">
+        <div class="critere-status">⚠️</div>
+        <div class="critere-content">
+          <div class="critere-title">Hashtags</div>
+          <div class="critere-obs">Difficile à évaluer complètement depuis les captures, mais les hashtags utilisés semblent trop génériques pour avoir un vrai impact local.</div>
+          <div class="critere-reco">→ Mixer des hashtags de proximité (#caen #calvados #coachcaen) avec des hashtags spécifiques à vos spécialités (#coachingadomicile #surpoids #selfdefense). C'est comme ça qu'on touche les bonnes personnes.</div>
+        </div>
+        <span class="tag tag-warn">À vérifier</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYNTHÈSE -->
+  <div class="synthese">
+    <div class="synthese-title">Synthèse & Recommandations</div>
+    <div class="synthese-grid">
+      <div class="synthese-block">
+        <div class="synthese-label">Ce qui fonctionne déjà</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Une bio claire, bien remplie, qui fait le travail</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Des spécialités définies et vraiment différenciantes</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Des photos de séances authentiques à valoriser</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Un ancrage local fort sur Caen et le Calvados</div>
+      </div>
+      <div class="synthese-block">
+        <div class="synthese-label">Ce qu'il faut corriger maintenant</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Construire une identité visuelle cohérente et reconnaissable</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Simplifier les visuels — moins c'est plus</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Mettre en place une ligne éditoriale avec 4 piliers clairs</div>
+        <div class="synthese-item"><span class="synthese-dash">—</span>Démarrer les stories au quotidien</div>
+      </div>
+    </div>
+
+    <div class="priorites" style="margin-top:32px">
+      <div class="synthese-label" style="margin-bottom:16px">Plan d'action — Par ordre de priorité</div>
+      <div class="priorite-item">
+        <div class="priorite-num">1</div>
+        <div>
+          <div class="priorite-title">Direction artistique — semaine 1</div>
+          <div class="priorite-desc">Palette de couleurs, typographies, traitement photo. Tout part de là — tant que ce n'est pas posé, le reste du travail ne tient pas vraiment.</div>
+        </div>
+      </div>
+      <div class="priorite-item">
+        <div class="priorite-num">2</div>
+        <div>
+          <div class="priorite-title">Templates Canva — semaine 1</div>
+          <div class="priorite-desc">Trois ou quatre templates réutilisables — conseil, promo, témoignage, citation — dans la nouvelle charte. On crée ça une fois, vous les utilisez des mois.</div>
+        </div>
+      </div>
+      <div class="priorite-item">
+        <div class="priorite-num">3</div>
+        <div>
+          <div class="priorite-title">Planning 30 jours — semaine 2</div>
+          <div class="priorite-desc">Stories quotidiennes et trois posts par semaine, avec légendes et hashtags ciblés Caen. Tout est prêt à publier, vous n'avez plus qu'à appuyer sur le bouton.</div>
+        </div>
+      </div>
+      <div class="priorite-item">
+        <div class="priorite-num">4</div>
+        <div>
+          <div class="priorite-title">Suivi mensuel — mois 2+</div>
+          <div class="priorite-desc">On regarde ce qui fonctionne, on ajuste ce qui doit l'être, et on repart pour un tour. C'est comme ça qu'on construit quelque chose de solide sur la durée.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <div class="footer-logo">Antoine<em>.</em></div>
+    <div class="footer-info">
+      <span>antoine@tonemail.fr</span>
+      <span>Audit réalisé gratuitement · Sans engagement</span>
+    </div>
+  </div>
+
+</div>
+
+<button class="print-btn" onclick="window.print()" title="Sauvegarder en PDF">🖨</button>
+
+<script>
+  const now = new Date();
+  document.getElementById('audit-date').textContent = now.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  setTimeout(() => {
+    document.getElementById('score-bar').style.width = '40%';
+  }, 300);
+
+  function toggleSection(head) {
+    const body = head.nextElementSibling;
+    head.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  document.querySelector('.section-body').classList.add('open');
+</script>
+</body>
+</html>
